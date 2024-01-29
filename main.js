@@ -3,12 +3,13 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import * as THREE from "three";
 
-let scene, camera, light, renderer;
+let scene, camera, renderer;
+let textures;
+let materials;
+let particlesComputeProgram;
+let pointsRenderProgram;
 let controls;
-let geometry, cube, mesh, material;
-let data, texture, points;
-let fboParticles, rtTexturePos, rtTexturePos2, simulationShader;
-let positions;
+let simStep = 0;
 
 async function loadShaders()
 {
@@ -137,6 +138,39 @@ function resampleToBox()
 }
 window.resampleToBox = resampleToBox;
 
+function setupTextureResources(params)
+{
+	const { width, height } = params;
+	const len = width * height;
+	const data = new Float32Array(len * 4);
+
+	for (let i = 0; i < len; i++)
+	{
+		const i4 = i * 3;
+		data[i4] = Math.random() * 2 - 1     * 1;
+		data[i4 + 1] = Math.random() * 2 - 1 * 1;
+		data[i4 + 2] = Math.random() * 2 - 1 * 1;
+	}
+
+	const originalPositionDataTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
+	originalPositionDataTexture.needsUpdate = true;
+
+	const rtParams = {
+		minFilter: THREE.NearestFilter,
+		magFilter: THREE.NearestFilter,
+		format: THREE.RGBAFormat,
+		type: THREE.FloatType
+	};
+
+	const computeRenderTarget0 = new THREE.WebGLRenderTarget(width, height, rtParams);
+	const computeRenderTarget1 = new THREE.WebGLRenderTarget(width, height, rtParams);
+
+	return {
+		originalPositionDataTexture,
+		computeRenderTargets: [computeRenderTarget0, computeRenderTarget1]
+	};
+}
+
 function setupShaderMaterials(shaders, textures)
 {
 	// This is analogy of compute shader which calculates positions of the particles
@@ -145,6 +179,10 @@ function setupShaderMaterials(shaders, textures)
 		vertexShader: shaders.simVertex,
 		fragmentShader: shaders.simFragment,
 		uniforms: {
+			uTime: {
+				value: 0
+			},
+
 			uParticlesOriginPosition:{
 				type: "t",
 				value: textures.originalPositionDataTexture
@@ -152,7 +190,7 @@ function setupShaderMaterials(shaders, textures)
 
 			uParticlesPositions: {
 				type: "t",
-				value: textures.positionsDataTexture0
+				value: textures.originalPositionDataTexture
 			}
 		}
 	});
@@ -163,10 +201,11 @@ function setupShaderMaterials(shaders, textures)
 		vertexShader: shaders.pointsVertex,
 		fragmentShader: shaders.pointsFragment,
 		uniforms: {
+			uTime: { value: 0 },
 			uParticlesOutput: {
 				type: "t",
-				value: textures.positionsDataTexture0
-			}
+				value: null
+			},
 		}
 	});
 
@@ -176,9 +215,12 @@ function setupShaderMaterials(shaders, textures)
 	};
 }
 
-function setupComputePipeline(pipelineParams = {})
+function setupParticlesComputePorgram(pipelineParams = {})
 {
+	const { width, height, materials } = pipelineParams;
 	const scene = new THREE.Scene();
+
+	// TODO: why 2^53??
 	const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1 / Math.pow(2, 53), 1);
 	// const camera = new THREE.OrthographicCamera( width / - 2, width / 2, height / 2, height / - 2, 1, 1000 );
 
@@ -186,43 +228,56 @@ function setupComputePipeline(pipelineParams = {})
 		-1, -1, 0,
 		1, -1, 0,
 		1, 1, 0,
-		-1, 1, 0
+
+		1, 1, 0,
+		-1, 1, 0,
+		-1, -1, 0,
 	]);
 
 	const quadUVs = new Float32Array([
 		0, 0,
 		1, 0,
 		1, 1,
-		0, 1
+
+		1, 1,
+		0, 1,
+		0, 0
 	]);
 
 	const quadGeometry = new THREE.BufferGeometry();
-	quadGeometry.setAttribute("position", new THREE.BufferAttribute(quadVertices));
-	quadGeometry.setAttribute("uv", new THREE.BufferAttribute(quadUVs));
-	const quadMesh = new THREE.Mesh(quadGeometry, pipelineParams.maerials.simShaderMaterial);
-
-	const params = {
-		minFilter: THREE.NearestFilter,
-		magFilter: THREE.NearestFilter,
-		format: THREE.RGBAFormat,
-		type: THREE.FloatType
-	};
-
-	const renderTarget = new THREE.WebGLRenderTarget(pipelineParams.width, pipelineParams.height, params);
+	quadGeometry.setAttribute("position", new THREE.BufferAttribute(quadVertices, 3));
+	quadGeometry.setAttribute("uv", new THREE.BufferAttribute(quadUVs, 2));
+	const quadMesh = new THREE.Mesh(quadGeometry, materials.simShaderMaterial);
 
 	scene.add(camera);
 	scene.add(quadMesh);
 
 	return {
 		scene,
-		camera,
-		renderTarget
+		camera
 	};
 }
 
-function setupRenderPipeline(pipelineParams = {})
+function setupPointsRenderProgram(pipelineParams = {})
 {
+	const { width, height, materials } = pipelineParams;
+	const pointsGeometry = new THREE.BufferGeometry();
+	const positions = new Float32Array(width * height * 3);
 
+	for (let i = 0, l = width * height; i < l; i++)
+	{
+		const i3 = i * 3;
+		positions[i3] = ( i % width ) / width ;
+		positions[i3 + 1] = ( i / width ) / height;
+	}
+
+	pointsGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+	const pointsMesh = new THREE.Points(pointsGeometry, materials.pointsRenderShaderMaterial);
+
+	return {
+		pointsMesh
+	};
 }
 
 function init(shaders)
@@ -249,87 +304,16 @@ function init(shaders)
 	controls.radius = 400;
 	controls.speed = 3;
 
-	//
-
 	var width = 256, height = 256;
 	// var width = 64, height = 64;
 	// var width = 128, height = 128;
 
-	data = new Float32Array( width * height * 3 );
+	textures = setupTextureResources({ width, height });
+	materials = setupShaderMaterials(shaders, textures);
+	particlesComputeProgram = setupParticlesComputePorgram({ width, height, materials });
+	pointsRenderProgram = setupPointsRenderProgram({ width, height, materials });
 
-	const boxGeometry = new THREE.BoxGeometry( 1, 1, 1 );
-	const m2 = new THREE.Mesh(
-		boxGeometry,
-		new THREE.MeshBasicMaterial({color: "white"})
-	)
-	// scene.add(m2)
-
-	// Create a sampler for a Mesh surface.
-	const sampler = new MeshSurfaceSampler( m2 )
-	.setWeightAttribute( 'color' )
-	.build();
-
-
-	geometry = new THREE.BufferGeometry();
-	const position = new THREE.Vector3();
-	const positions = new Float32Array(width * height * 3);
-
-	for ( var i = 0, l = width * height; i < l; i ++ )
-	{
-		const i3 = i * 3;
-		positions[i3] = ( i % width ) / width ;
-		positions[i3 + 1] = ( i / width ) / height;
-	}
-
-	geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-
-	// resampleToBox()
-
-	const dt = setupGpuParticles(shaders);
-
-	material = new THREE.ShaderMaterial({
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        vertexColors: true,
-
-        vertexShader: shaders.particlesVertex,
-        fragmentShader: shaders.particlesFragment,
-
-        uniforms: {
-            uTime: { value: 0. },
-            uParticlesOutput: {
-            	type: "t",
-            	value: dt
-            },
-            uSize: {
-                value: 17.5 * renderer.getPixelRatio()
-            }
-        }
-    })
-
-	mesh = new THREE.Points( geometry, material );
-	scene.add( mesh );
-}
-
-function setupGpuParticles(shaders)
-{
-	const width = 256;
-	const height = 256;
-	const len = width * height;
-	const data = new Float32Array(len * 4);
-
-	for (let i = 0; i < len; i++)
-	{
-		const i4 = i * 3;
-		data[i4] = Math.random() * 2 - 1     * 1;
-		data[i4 + 1] = Math.random() * 2 - 1 * 1;
-		data[i4 + 2] = Math.random() * 2 - 1 * 1;
-	}
-
-	const dataTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
-	dataTexture.needsUpdate = true;
-
-	return dataTexture;
+	scene.add( pointsRenderProgram.pointsMesh );
 }
 
 function animate()
@@ -343,9 +327,19 @@ var timer = 0;
 function render()
 {
 	timer += 0.01;
-	material.uniforms.uTime.value = timer;
 	controls.update();
+	materials.simShaderMaterial.uniforms.uTime.value = timer;
+	renderer.setRenderTarget(textures.computeRenderTargets[simStep]);
+	renderer.render(particlesComputeProgram.scene, particlesComputeProgram.camera);
+	// renderer.render(particlesComputeProgram.scene, camera);
+
+	// materials.pointsRenderShaderMaterial.uniforms.uTime.value = timer;
+	renderer.setRenderTarget(null);
+	materials.pointsRenderShaderMaterial.uniforms.uParticlesOutput.value = textures.computeRenderTargets[simStep].texture;
 	renderer.render( scene, camera );
+
+	materials.simShaderMaterial.uniforms.uParticlesPositions.value = textures.computeRenderTargets[simStep].texture;
+	simStep = (simStep + 1) % 2;
 }
 
 async function onLoad()
