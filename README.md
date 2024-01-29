@@ -1,2 +1,3 @@
 # Wrok in progress
-![image](https://github.com/lightest/gpuparticles/assets/2725889/ade9e8f8-1588-405b-95c2-336ae21c445d)
+![image](https://github.com/lightest/gpuparticles/assets/2725889/0d4c481e-ff2e-432e-89bf-cf23d014e991)
+
