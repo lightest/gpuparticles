@@ -10,6 +10,8 @@ let particlesComputeProgram;
 let pointsRenderProgram;
 let controls;
 let simStep = 0;
+const clock = new THREE.Clock();
+let prevFrameTime = clock.getElapsedTime();
 
 async function loadShaders()
 {
@@ -33,50 +35,45 @@ async function loadShaders()
 	};
 }
 
-function resampleToTorusKnot()
+function resampleToTorusKnot(width, height)
 {
-	// const geometry = new THREE.TorusKnotGeometry( 10, 3, 100, 16 );
-	// const material = new THREE.MeshStandardMaterial( { color: 0xffffff } );
-	// const torusKnot = new THREE.Mesh( geometry, material );
-
+	let i, l;
 	const torusGeometry = new THREE.TorusKnotGeometry( 1, .25, 100, 16 );
-	// const coneGeometry = new THREE.ConeGeometry( .5, 1, 32 );
-	// const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 	const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
 	const mesh = new THREE.Mesh(torusGeometry, material );
+
+	console.log(torusGeometry.attributes);
 
 	// Create a sampler for a Mesh surface.
 	const sampler = new MeshSurfaceSampler( mesh )
 	.setWeightAttribute( 'color' )
 	.build();
 
-	var width = 512, height = 512;
 	const position = new THREE.Vector3();
-	const positions = geometry.attributes.position.array;
 
-	for ( var i = 0, l = width * height; i < l; i++ )
+	// Positions and life-time.
+	const data = new Float32Array(width * height * 4);
+
+	for (i = 0, l = width * height; i < l; i++ )
 	{
-		const i3 = i * 3;
+		const i4 = i * 4;
 		sampler.sample(position);
-		positions[i3] = position.x;
-		positions[i3 + 1] = position.y;
-		positions[i3 + 2] = position.z;
+		data[i4] = position.x;
+		data[i4 + 1] = position.y;
+		data[i4 + 2] = position.z;
+
+		// Initial life-time.
+		data[i4 + 3] = Math.random();
 	}
 
-	// geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-	geometry.attributes.position.needsUpdate = true;
+	return data;
 }
 window.resampleToTorusKnot = resampleToTorusKnot;
 
-function resampleToCone()
+function resampleToCone(width, height)
 {
-	// const geometry = new THREE.TorusKnotGeometry( 10, 3, 100, 16 );
-	// const material = new THREE.MeshStandardMaterial( { color: 0xffffff } );
-	// const torusKnot = new THREE.Mesh( geometry, material );
-
-	// const torusGeometry = new THREE.TorusKnotGeometry( 1, .25, 100, 16 );
+	let i, l;
 	const coneGeometry = new THREE.ConeGeometry( .5, 1, 32 );
-	// const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 	const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
 	const mesh = new THREE.Mesh(coneGeometry, material );
 
@@ -85,32 +82,30 @@ function resampleToCone()
 	.setWeightAttribute( 'color' )
 	.build();
 
-	var width = 512, height = 512;
 	const position = new THREE.Vector3();
-	const positions = geometry.attributes.position.array;
 
-	for ( var i = 0, l = width * height; i < l; i++ )
+	// Positions and life-time.
+	const data = new Float32Array(width * height * 4);
+
+	for (i = 0, l = width * height; i < l; i++ )
 	{
-		const i3 = i * 3;
+		const i4 = i * 4;
 		sampler.sample(position);
-		positions[i3] = position.x;
-		positions[i3 + 1] = position.y;
-		positions[i3 + 2] = position.z;
+		data[i4] = position.x;
+		data[i4 + 1] = position.y;
+		data[i4 + 2] = position.z;
+
+		// Initial life-time.
+		data[i4 + 3] = Math.random();
 	}
 
-	// geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-	geometry.attributes.position.needsUpdate = true;
+	return data;
 }
 window.resampleToCone = resampleToCone;
 
-function resampleToBox()
+function resampleToBox(width, height)
 {
-	// const geometry = new THREE.TorusKnotGeometry( 10, 3, 100, 16 );
-	// const material = new THREE.MeshStandardMaterial( { color: 0xffffff } );
-	// const torusKnot = new THREE.Mesh( geometry, material );
-
-	// const torusGeometry = new THREE.TorusKnotGeometry( 1, .25, 100, 16 );
-	// const coneGeometry = new THREE.ConeGeometry( .5, 1, 32 );
+	let i, l;
 	const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 	const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
 	const mesh = new THREE.Mesh(boxGeometry, material );
@@ -120,21 +115,24 @@ function resampleToBox()
 	.setWeightAttribute( 'color' )
 	.build();
 
-	var width = 512, height = 512;
 	const position = new THREE.Vector3();
-	const positions = geometry.attributes.position.array;
 
-	for ( var i = 0, l = width * height; i < l; i++ )
+	// Positions and life-time.
+	const data = new Float32Array(width * height * 4);
+
+	for (i = 0, l = width * height; i < l; i++ )
 	{
-		const i3 = i * 3;
+		const i4 = i * 4;
 		sampler.sample(position);
-		positions[i3] = position.x;
-		positions[i3 + 1] = position.y;
-		positions[i3 + 2] = position.z;
+		data[i4] = position.x;
+		data[i4 + 1] = position.y;
+		data[i4 + 2] = position.z;
+
+		// Initial life-time.
+		data[i4 + 3] = Math.random();
 	}
 
-	// geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-	geometry.attributes.position.needsUpdate = true;
+	return data;
 }
 window.resampleToBox = resampleToBox;
 
@@ -142,15 +140,22 @@ function setupTextureResources(params)
 {
 	const { width, height } = params;
 	const len = width * height;
-	const data = new Float32Array(len * 4);
+	let data = params.data;
 
-	for (let i = 0; i < len; i++)
+	if (!data)
 	{
-		const i4 = i * 3;
-		data[i4] = Math.random() * 2 - 1     * 1;
-		data[i4 + 1] = Math.random() * 2 - 1 * 1;
-		data[i4 + 2] = Math.random() * 2 - 1 * 1;
+		data = new Float32Array(len * 4);
+
+		for (let i = 0; i < len; i++)
+		{
+			const i4 = i * 3;
+			data[i4] = Math.random() * 2 - 1     * 1;
+			data[i4 + 1] = Math.random() * 2 - 1 * 1;
+			data[i4 + 2] = Math.random() * 2 - 1 * 1;
+		}
 	}
+
+	console.log(data);
 
 	const originalPositionDataTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
 	originalPositionDataTexture.needsUpdate = true;
@@ -180,6 +185,10 @@ function setupShaderMaterials(shaders, textures)
 		fragmentShader: shaders.simFragment,
 		uniforms: {
 			uTime: {
+				value: 0
+			},
+
+			uDt: {
 				value: 0
 			},
 
@@ -295,8 +304,8 @@ function init(shaders)
 	scene = new THREE.Scene();
 
 	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
-	camera.position.x = 1
-	camera.position.y = 1
+	// camera.position.x = 1
+	// camera.position.y = 1
 	camera.position.z = 1
 	scene.add(camera)
 
@@ -304,11 +313,13 @@ function init(shaders)
 	controls.radius = 400;
 	controls.speed = 3;
 
-	var width = 256, height = 256;
+	var width = 512, height = 512;
 	// var width = 64, height = 64;
 	// var width = 128, height = 128;
 
-	textures = setupTextureResources({ width, height });
+	// const data = resampleToTorusKnot(width, height);
+	const data = resampleToBox(width, height);
+	textures = setupTextureResources({ width, height, data });
 	materials = setupShaderMaterials(shaders, textures);
 	particlesComputeProgram = setupParticlesComputePorgram({ width, height, materials });
 	pointsRenderProgram = setupPointsRenderProgram({ width, height, materials });
@@ -322,24 +333,25 @@ function animate()
 	render();
 }
 
-var timer = 0;
-
 function render()
 {
-	timer += 0.01;
+	const elapsedTime = clock.getElapsedTime();
+	const dt = elapsedTime - prevFrameTime;
 	controls.update();
-	materials.simShaderMaterial.uniforms.uTime.value = timer;
+	materials.simShaderMaterial.uniforms.uTime.value = elapsedTime;
+	materials.simShaderMaterial.uniforms.uDt.value = dt;
 	renderer.setRenderTarget(textures.computeRenderTargets[simStep]);
 	renderer.render(particlesComputeProgram.scene, particlesComputeProgram.camera);
 	// renderer.render(particlesComputeProgram.scene, camera);
 
-	// materials.pointsRenderShaderMaterial.uniforms.uTime.value = timer;
+	// materials.pointsRenderShaderMaterial.uniforms.uTime.value = elapsedTime;
 	renderer.setRenderTarget(null);
 	materials.pointsRenderShaderMaterial.uniforms.uParticlesOutput.value = textures.computeRenderTargets[simStep].texture;
 	renderer.render( scene, camera );
 
 	materials.simShaderMaterial.uniforms.uParticlesPositions.value = textures.computeRenderTargets[simStep].texture;
 	simStep = (simStep + 1) % 2;
+	prevFrameTime = elapsedTime;
 }
 
 async function onLoad()

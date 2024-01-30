@@ -1,8 +1,5 @@
 uniform sampler2D uParticlesOutput;
 
-uniform float width;
-uniform float height;
-
 uniform float uSize;
 uniform float uTime;
 
@@ -14,11 +11,9 @@ bool isPerspectiveMatrix( mat4 m )
 	return m[ 2 ][ 3 ] == - 1.0;
 }
 
-void main() {
-	// vUv = position.xy + vec2( 0.5 / width, 0.5 / height );
-
+void main()
+{
 	// vec3 color = texture2D( map, vUv ).rgb * 200.0 - 100.0;
-	// vec3 pos = position;
 	vec3 pos = texture2D(uParticlesOutput, position.xy).xyz;
 
 	// pos += (sin(uTime * 2.) + 1.0) * normalize(pos);
