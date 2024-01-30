@@ -1,5 +1,5 @@
 import "./style.css";
-// import * as dat from "lil-gui";
+import * as dat from "lil-gui";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
@@ -15,6 +15,22 @@ let controls;
 let simStep = 0;
 const clock = new THREE.Clock();
 let prevFrameTime = clock.getElapsedTime();
+
+const gui = new dat.GUI({ width: 400 });
+const debugObject = {
+	particleStartColor: 0x8c2eff,
+	particleEndColor: 0x6bdef5
+};
+
+gui.addColor(debugObject, "particleStartColor").onChange(() =>
+{
+	materials.pointsRenderShaderMaterial.uniforms.uPartcileStartColor.value.set(debugObject.particleStartColor);
+});
+
+gui.addColor(debugObject, "particleEndColor").onChange(() =>
+{
+	materials.pointsRenderShaderMaterial.uniforms.uPartcileEndColor.value.set(debugObject.particleEndColor);
+});
 
 /**
  * Loaders
@@ -285,11 +301,22 @@ function setupShaderMaterials(shaders, textures)
 		fragmentShader: shaders.pointsFragment,
 		uniforms: {
 			uTime: { value: 0 },
+
+			uPartcileStartColor: {
+				value: new THREE.Color(debugObject.particleStartColor)
+			},
+
+			uPartcileEndColor: {
+				value: new THREE.Color(debugObject.particleEndColor)
+			},
+
 			uParticlesOutput: {
 				type: "t",
 				value: null
 			},
-		}
+		},
+		blending: THREE.AdditiveBlending,
+		transparent: true,
 	});
 
 	return {

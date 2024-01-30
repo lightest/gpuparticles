@@ -1,10 +1,13 @@
 uniform sampler2D uParticlesOutput;
+uniform vec3 uPartcileStartColor;
+uniform vec3 uPartcileEndColor;
 
 uniform float uSize;
 uniform float uTime;
 
 varying vec2 vUv;
 varying vec4 vPosition;
+varying vec3 vParticleColor;
 
 bool isPerspectiveMatrix( mat4 m )
 {
@@ -14,7 +17,8 @@ bool isPerspectiveMatrix( mat4 m )
 void main()
 {
 	// vec3 color = texture2D( map, vUv ).rgb * 200.0 - 100.0;
-	vec3 pos = texture2D(uParticlesOutput, position.xy).xyz;
+	vec4 data = texture2D(uParticlesOutput, position.xy);
+	vec3 pos = data.xyz;
 
 	// pos += (sin(uTime * 2.) + 1.0) * normalize(pos);
 
@@ -44,6 +48,12 @@ void main()
 
 	// gl_Position = projectionMatrix * modelViewMatrix * vec4( color, 1.0 );
 	// gl_Position = projectionMatrix * modelViewMatrix * vec4( position * 200.0, 1.0 );
+
+	float lifeTime = data.w;
+
+	// 1.5 is max life-itme, hard coded for now.
+	vec3 color = mix(uPartcileStartColor, uPartcileEndColor, lifeTime / 1.5);
+	vParticleColor = color;
 
 	gl_PointSize = 1.0f;
 	gl_Position = projectedPosition;
