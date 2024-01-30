@@ -119,10 +119,10 @@ void main()
 
 	float tf = uTime * 0.5f;
 	float n0 = cnoise3(pos * 3.0 + tf) * .005;
-	// float n1 = cnoise3(pos * 5.0 + n0 + tf) * .01;
+	// float n1 = cnoise3(pos * 5.0 + n0 + tf) * .0025;
 	pos += normalize(pos) * n0;
 
-	if (particleLifeTime > 1.0)
+	if (particleLifeTime > 1.5)
 	{
 		pos = originPos;
 		particleLifeTime = rndVal;

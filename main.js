@@ -1,7 +1,10 @@
 import "./style.css";
+// import * as dat from "lil-gui";
+import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
-import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
 let scene, camera, renderer;
 let textures;
@@ -12,6 +15,31 @@ let controls;
 let simStep = 0;
 const clock = new THREE.Clock();
 let prevFrameTime = clock.getElapsedTime();
+
+/**
+ * Loaders
+ */
+// Texture loader
+const textureLoader = new THREE.TextureLoader();
+
+// Draco loader
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('draco/');
+
+// GLTF loader
+const gltfLoader = new GLTFLoader()
+gltfLoader.setDRACOLoader(dracoLoader);
+
+// gltfLoader.load("models/monkey.glb", (glbModel) =>
+// {
+// 	const mesh = glbModel.scene.children.find(child => child instanceof THREE.Mesh);
+// 	console.log(mesh);
+// 	const data = sampleMeshSurface(512, 512, mesh);
+// 	console.log(data);
+// 	const originalPositionDataTexture = new THREE.DataTexture(data, 512, 512, THREE.RGBAFormat, THREE.FloatType);
+// 	originalPositionDataTexture.needsUpdate = true;
+// 	materials.simShaderMaterial.uniforms.uParticlesOriginPosition.value = originalPositionDataTexture;
+// });
 
 async function loadShaders()
 {
@@ -33,6 +61,43 @@ async function loadShaders()
 		pointsVertex,
 		pointsFragment
 	};
+}
+
+function sampleMeshSurface(width, height, mesh)
+{
+	if (!mesh)
+	{
+		console.error("Mesh is undefined!");
+		return;
+	}
+
+	let i, l;
+	const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
+	mesh.material = material;
+
+	// Create a sampler for a Mesh surface.
+	const sampler = new MeshSurfaceSampler( mesh )
+	.setWeightAttribute( 'color' )
+	.build();
+
+	const position = new THREE.Vector3();
+
+	// Positions and life-time.
+	const data = new Float32Array(width * height * 4);
+
+	for (i = 0, l = width * height; i < l; i++ )
+	{
+		const i4 = i * 4;
+		sampler.sample(position);
+		data[i4] = position.x;
+		data[i4 + 1] = position.y;
+		data[i4 + 2] = position.z;
+
+		// Initial life-time.
+		data[i4 + 3] = Math.random();
+	}
+
+	return data;
 }
 
 function resampleToTorusKnot(width, height)
@@ -136,6 +201,17 @@ function resampleToBox(width, height)
 }
 window.resampleToBox = resampleToBox;
 
+function glbToMeshSurfacePoints(glbModel)
+{
+	const width = 512;
+	const height = 512;
+	const mesh = glbModel.scene.children.find(child => child instanceof THREE.Mesh);
+	const data = sampleMeshSurface(width, height, mesh);
+	const originalPositionDataTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
+	originalPositionDataTexture.needsUpdate = true;
+	materials.simShaderMaterial.uniforms.uParticlesOriginPosition.value = originalPositionDataTexture;
+}
+
 function setupTextureResources(params)
 {
 	const { width, height } = params;
@@ -154,8 +230,6 @@ function setupTextureResources(params)
 			data[i4 + 2] = Math.random() * 2 - 1 * 1;
 		}
 	}
-
-	console.log(data);
 
 	const originalPositionDataTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
 	originalPositionDataTexture.needsUpdate = true;
@@ -318,6 +392,7 @@ function init(shaders)
 	// var width = 128, height = 128;
 
 	// const data = resampleToTorusKnot(width, height);
+	// const data = resampleToCone(width, height);
 	const data = resampleToBox(width, height);
 	textures = setupTextureResources({ width, height, data });
 	materials = setupShaderMaterials(shaders, textures);
@@ -354,10 +429,32 @@ function render()
 	prevFrameTime = elapsedTime;
 }
 
+function handleFileDrop(e)
+{
+	e.preventDefault();
+	const r = new FileReader();
+	r.onload = function (readRes) {
+		console.log(readRes);
+		gltfLoader.parse(readRes.target.result, "", (result) => {
+			console.log(result);
+			glbToMeshSurfacePoints(result);
+		});
+	};
+	r.readAsArrayBuffer(e.dataTransfer.files[0]);
+}
+
+function addEventListeners()
+{
+	const canvas = document.querySelector("canvas");
+	canvas.addEventListener('drop', handleFileDrop);
+	canvas.addEventListener('dragover', e => e.preventDefault());
+}
+
 async function onLoad()
 {
 	const shaders = await loadShaders();
 	init(shaders);
+	addEventListeners();
 	animate();
 }
 
