@@ -6,6 +6,8 @@ import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 
+window.THREE = THREE;
+
 let scene, camera, renderer;
 let textures;
 let materials;
@@ -19,8 +21,19 @@ let prevFrameTime = clock.getElapsedTime();
 const gui = new dat.GUI({ width: 400 });
 const debugObject = {
 	particleStartColor: 0x8c2eff,
-	particleEndColor: 0x6bdef5
+	particleEndColor: 0x6bdef5,
+	particleLifetime: 1.5,
+	spawnPointMix: 0
 };
+
+gui.add(debugObject, "particleLifetime", .01, 7).onChange((v) => {
+	materials.simShaderMaterial.uniforms.uParticlesLifetime.value = v;
+	materials.pointsRenderShaderMaterial.uniforms.uParticlesLifetime.value = v;
+});
+
+gui.add(debugObject, "spawnPointMix", 0, 1, .001).onChange((v) => {
+	materials.simShaderMaterial.uniforms.uOriginPointMix.value = v;
+});
 
 gui.addColor(debugObject, "particleStartColor").onChange(() =>
 {
@@ -210,7 +223,7 @@ function resampleToBox(width, height)
 		data[i4 + 2] = position.z;
 
 		// Initial life-time.
-		data[i4 + 3] = Math.random();
+		data[i4 + 3] = Math.random() * debugObject.particleLifetime;
 	}
 
 	return data;
@@ -233,6 +246,7 @@ function setupTextureResources(params)
 	const { width, height } = params;
 	const len = width * height;
 	let data = params.data;
+	let altData = params.altData;
 
 	if (!data)
 	{
@@ -247,14 +261,24 @@ function setupTextureResources(params)
 		}
 	}
 
+	if (!altData)
+	{
+		altData = resampleToTorusKnot(width, height);
+	}
+
 	const originalPositionDataTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
 	originalPositionDataTexture.needsUpdate = true;
 
+	const originalPositionDataTextureAlt = new THREE.DataTexture(altData, width, height, THREE.RGBAFormat, THREE.FloatType);
+	originalPositionDataTextureAlt.needsUpdate = true;
+
+	// NOTE! type can be both THREE.FloatType and THREE.HalfFloatType for compute render targets.
+	// HalfFloat uses 16-bit floating point textures which in some cases allows to achieve faster performance.
 	const rtParams = {
 		minFilter: THREE.NearestFilter,
 		magFilter: THREE.NearestFilter,
 		format: THREE.RGBAFormat,
-		type: THREE.FloatType
+		type: THREE.HalfFloatType
 	};
 
 	const computeRenderTarget0 = new THREE.WebGLRenderTarget(width, height, rtParams);
@@ -262,6 +286,7 @@ function setupTextureResources(params)
 
 	return {
 		originalPositionDataTexture,
+		originalPositionDataTextureAlt,
 		computeRenderTargets: [computeRenderTarget0, computeRenderTarget1]
 	};
 }
@@ -282,9 +307,22 @@ function setupShaderMaterials(shaders, textures)
 				value: 0
 			},
 
-			uParticlesOriginPosition:{
+			uParticlesLifetime: {
+				value: debugObject.particleLifetime
+			},
+
+			uOriginPointMix: {
+				value: debugObject.spawnPointMix
+			},
+
+			uParticlesOriginPosition: {
 				type: "t",
 				value: textures.originalPositionDataTexture
+			},
+
+			uParticlesOriginPositionAlt: {
+				type: "t",
+				value: textures.originalPositionDataTextureAlt
 			},
 
 			uParticlesPositions: {
@@ -301,6 +339,10 @@ function setupShaderMaterials(shaders, textures)
 		fragmentShader: shaders.pointsFragment,
 		uniforms: {
 			uTime: { value: 0 },
+
+			uParticlesLifetime: {
+				value: debugObject.particleLifetime
+			},
 
 			uPartcileStartColor: {
 				value: new THREE.Color(debugObject.particleStartColor)
@@ -470,11 +512,23 @@ function handleFileDrop(e)
 	r.readAsArrayBuffer(e.dataTransfer.files[0]);
 }
 
+function handleWindowResize(e)
+{
+	// Update camera
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+
+	// Update renderer
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+}
+
 function addEventListeners()
 {
 	const canvas = document.querySelector("canvas");
 	canvas.addEventListener('drop', handleFileDrop);
 	canvas.addEventListener('dragover', e => e.preventDefault());
+	window.addEventListener('resize', handleWindowResize);
 }
 
 async function onLoad()

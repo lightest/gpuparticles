@@ -1,6 +1,7 @@
 // Particles original position, which we need if we want to reset them.
 // For instance to respawn the particle at the model surface.
 uniform sampler2D uParticlesOriginPosition;
+uniform sampler2D uParticlesOriginPositionAlt;
 
 // Particles position calculated on the previous frame
 uniform sampler2D uParticlesPositions;
@@ -9,6 +10,8 @@ uniform sampler2D uParticlesPositions;
 uniform float uTime;
 // Delta time.
 uniform float uDt;
+uniform float uParticlesLifetime;
+uniform float uOriginPointMix;
 
 varying vec2 vUv;
 
@@ -25,7 +28,7 @@ float nrand(vec2 n)
 
 float n1rand(vec2 n)
 {
-  return nrand(0.07 * fract(uTime) + n);
+  return nrand(0.07 * fract(uTime * .001) + n);
 }
 
 //	Classic Perlin 3D Noise
@@ -109,9 +112,11 @@ void main()
 	// Stores particle position in 3d space and life-time.
 	vec4 particleData = texture2D(uParticlesPositions, vUv);
 	vec4 originParticleData = texture2D(uParticlesOriginPosition, vUv);
+	vec4 originParticleDataAlt = texture2D(uParticlesOriginPositionAlt, vUv);
 
 	vec3 pos = particleData.xyz;
 	vec3 originPos = originParticleData.xyz;
+	vec3 originPosAlt = originParticleDataAlt.xyz;
 
 	float particleLifeTime = particleData.w + uDt;
 
@@ -122,10 +127,11 @@ void main()
 	// float n1 = cnoise3(pos * 5.0 + n0 + tf) * .0025;
 	pos += normalize(pos) * n0;
 
-	if (particleLifeTime > 1.5)
+	if (particleLifeTime > uParticlesLifetime)
 	{
-		pos = originPos;
-		particleLifeTime = rndVal;
+		pos = mix(originPos, originPosAlt, uOriginPointMix);
+		// pos = originPosAlt;
+		particleLifeTime = rndVal * uParticlesLifetime;
 	}
 
 	// Write new position out
