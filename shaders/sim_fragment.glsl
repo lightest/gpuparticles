@@ -1,7 +1,9 @@
 // Particles original position, which we need if we want to reset them.
 // For instance to respawn the particle at the model surface.
 uniform sampler2D uParticlesOriginPosition;
+uniform sampler2D uParticlesOriginNormal;
 uniform sampler2D uParticlesOriginPositionAlt;
+uniform sampler2D uParticlesOriginNormalAlt;
 
 // Particles position calculated on the previous frame
 uniform sampler2D uParticlesPositions;
@@ -111,21 +113,28 @@ void main()
 {
 	// Stores particle position in 3d space and life-time.
 	vec4 particleData = texture2D(uParticlesPositions, vUv);
+
 	vec4 originParticleData = texture2D(uParticlesOriginPosition, vUv);
+	vec4 originParticleNormals = texture2D(uParticlesOriginNormal, vUv);
 	vec4 originParticleDataAlt = texture2D(uParticlesOriginPositionAlt, vUv);
+	vec4 originParticleNormalsAlt = texture2D(uParticlesOriginNormalAlt, vUv);
 
 	vec3 pos = particleData.xyz;
 	vec3 originPos = originParticleData.xyz;
+	vec3 originNormal = originParticleNormals.xyz;
 	vec3 originPosAlt = originParticleDataAlt.xyz;
+	vec3 originNormalAlt = originParticleNormalsAlt.xyz;
+
+	vec3 normal = mix(originNormal, originNormalAlt, uOriginPointMix);
 
 	float particleLifeTime = particleData.w + uDt;
 
 	float rndVal = n1rand(pos.xy);
 
 	float tf = uTime * 0.5f;
-	float n0 = cnoise3(pos * 3.0 + tf) * .005;
+	float n0 = cnoise3(pos * 3.0 - tf) * .005;
 	// float n1 = cnoise3(pos * 5.0 + n0 + tf) * .0025;
-	pos += normalize(pos) * n0;
+	pos += normal * n0;
 
 	if (particleLifeTime > uParticlesLifetime)
 	{

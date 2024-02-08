@@ -101,32 +101,49 @@ function sampleMeshSurface(width, height, mesh)
 	}
 
 	let i, l;
-	const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
-	mesh.material = material;
+
+	// TODO: ensure this works for .glbs
+	if (!(mesh.material instanceof THREE.MeshBasicMaterial))
+	{
+		const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
+		mesh.material = material;
+	}
 
 	// Create a sampler for a Mesh surface.
 	const sampler = new MeshSurfaceSampler( mesh )
 	.setWeightAttribute( 'color' )
 	.build();
 
+	// Uncomment desired data samples.
 	const position = new THREE.Vector3();
+	const normal = new THREE.Vector3();
+	// const color = new THREE.Vector3();
+	// const uv = new THREE.Vector3();
 
 	// Positions and life-time.
-	const data = new Float32Array(width * height * 4);
+	const surfacePoints = new Float32Array(width * height * 4);
+	const surfaceNormals = new Float32Array(width * height * 4);
 
 	for (i = 0, l = width * height; i < l; i++ )
 	{
 		const i4 = i * 4;
-		sampler.sample(position);
-		data[i4] = position.x;
-		data[i4 + 1] = position.y;
-		data[i4 + 2] = position.z;
+		sampler.sample(position, normal);
+		surfacePoints[i4] = position.x;
+		surfacePoints[i4 + 1] = position.y;
+		surfacePoints[i4 + 2] = position.z;
 
 		// Initial life-time.
-		data[i4 + 3] = Math.random();
+		surfacePoints[i4 + 3] = Math.random();
+
+		surfaceNormals[i4] = normal.x;
+		surfaceNormals[i4 + 1] = normal.y;
+		surfaceNormals[i4 + 2] = normal.z;
 	}
 
-	return data;
+	return {
+		surfacePoints,
+		surfaceNormals
+	};
 }
 
 function resampleToTorusKnot(width, height)
@@ -134,33 +151,9 @@ function resampleToTorusKnot(width, height)
 	let i, l;
 	const torusGeometry = new THREE.TorusKnotGeometry( 1, .25, 100, 16 );
 	const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
-	const mesh = new THREE.Mesh(torusGeometry, material );
+	const mesh = new THREE.Mesh(torusGeometry, material);
 
-	console.log(torusGeometry.attributes);
-
-	// Create a sampler for a Mesh surface.
-	const sampler = new MeshSurfaceSampler( mesh )
-	.setWeightAttribute( 'color' )
-	.build();
-
-	const position = new THREE.Vector3();
-
-	// Positions and life-time.
-	const data = new Float32Array(width * height * 4);
-
-	for (i = 0, l = width * height; i < l; i++ )
-	{
-		const i4 = i * 4;
-		sampler.sample(position);
-		data[i4] = position.x;
-		data[i4 + 1] = position.y;
-		data[i4 + 2] = position.z;
-
-		// Initial life-time.
-		data[i4 + 3] = Math.random();
-	}
-
-	return data;
+	return sampleMeshSurface(width, height, mesh);
 }
 window.resampleToTorusKnot = resampleToTorusKnot;
 
@@ -171,29 +164,7 @@ function resampleToCone(width, height)
 	const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
 	const mesh = new THREE.Mesh(coneGeometry, material );
 
-	// Create a sampler for a Mesh surface.
-	const sampler = new MeshSurfaceSampler( mesh )
-	.setWeightAttribute( 'color' )
-	.build();
-
-	const position = new THREE.Vector3();
-
-	// Positions and life-time.
-	const data = new Float32Array(width * height * 4);
-
-	for (i = 0, l = width * height; i < l; i++ )
-	{
-		const i4 = i * 4;
-		sampler.sample(position);
-		data[i4] = position.x;
-		data[i4 + 1] = position.y;
-		data[i4 + 2] = position.z;
-
-		// Initial life-time.
-		data[i4 + 3] = Math.random();
-	}
-
-	return data;
+	return sampleMeshSurface(width, height, mesh);
 }
 window.resampleToCone = resampleToCone;
 
@@ -204,29 +175,7 @@ function resampleToBox(width, height)
 	const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
 	const mesh = new THREE.Mesh(boxGeometry, material );
 
-	// Create a sampler for a Mesh surface.
-	const sampler = new MeshSurfaceSampler( mesh )
-	.setWeightAttribute( 'color' )
-	.build();
-
-	const position = new THREE.Vector3();
-
-	// Positions and life-time.
-	const data = new Float32Array(width * height * 4);
-
-	for (i = 0, l = width * height; i < l; i++ )
-	{
-		const i4 = i * 4;
-		sampler.sample(position);
-		data[i4] = position.x;
-		data[i4 + 1] = position.y;
-		data[i4 + 2] = position.z;
-
-		// Initial life-time.
-		data[i4 + 3] = Math.random() * debugObject.particleLifetime;
-	}
-
-	return data;
+	return sampleMeshSurface(width, height, mesh);
 }
 window.resampleToBox = resampleToBox;
 
@@ -236,9 +185,22 @@ function glbToMeshSurfacePoints(glbModel)
 	const height = 512;
 	const mesh = glbModel.scene.children.find(child => child instanceof THREE.Mesh);
 	const data = sampleMeshSurface(width, height, mesh);
-	const originalPositionDataTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
-	originalPositionDataTexture.needsUpdate = true;
-	materials.simShaderMaterial.uniforms.uParticlesOriginPosition.value = originalPositionDataTexture;
+
+	const originalPositionsDataTexture = new THREE.DataTexture(data.surfacePoints, width, height, THREE.RGBAFormat, THREE.FloatType);
+	// const originalNormalsDataTexture = new THREE.DataTexture(data.surfaceNormals, width, height, THREE.RGBAFormat, THREE.FloatType);
+	const originalNormalsDataTexture = new THREE.DataTexture(
+		data.surfaceNormals, width, height, THREE.RGBAFormat, THREE.FloatType,
+		undefined,
+		undefined,
+		undefined,
+		THREE.LinearFilter,
+		THREE.LinearFilter
+	);
+	originalPositionsDataTexture.needsUpdate = true;
+	originalNormalsDataTexture.needsUpdate = true;
+
+	materials.simShaderMaterial.uniforms.uParticlesOriginPosition.value = originalPositionsDataTexture;
+	materials.simShaderMaterial.uniforms.uParticlesOriginNormal.value = originalNormalsDataTexture;
 }
 
 function setupTextureResources(params)
@@ -250,15 +212,7 @@ function setupTextureResources(params)
 
 	if (!data)
 	{
-		data = new Float32Array(len * 4);
-
-		for (let i = 0; i < len; i++)
-		{
-			const i4 = i * 3;
-			data[i4] = Math.random() * 2 - 1     * 1;
-			data[i4 + 1] = Math.random() * 2 - 1 * 1;
-			data[i4 + 2] = Math.random() * 2 - 1 * 1;
-		}
+		data = resampleToBox(width, height);
 	}
 
 	if (!altData)
@@ -266,11 +220,29 @@ function setupTextureResources(params)
 		altData = resampleToTorusKnot(width, height);
 	}
 
-	const originalPositionDataTexture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
+	const originalPositionDataTexture = new THREE.DataTexture(data.surfacePoints, width, height, THREE.RGBAFormat, THREE.FloatType);
+	const originalNormalsDataTexture = new THREE.DataTexture(
+		data.surfaceNormals, width, height, THREE.RGBAFormat, THREE.FloatType,
+		undefined,
+		undefined,
+		undefined,
+		THREE.LinearFilter,
+		THREE.LinearMipmapLinearFilter
+	);
 	originalPositionDataTexture.needsUpdate = true;
+	originalNormalsDataTexture.needsUpdate = true;
 
-	const originalPositionDataTextureAlt = new THREE.DataTexture(altData, width, height, THREE.RGBAFormat, THREE.FloatType);
+	const originalPositionDataTextureAlt = new THREE.DataTexture(altData.surfacePoints, width, height, THREE.RGBAFormat, THREE.FloatType);
+	const originalNormalsDataTextureAlt = new THREE.DataTexture(
+		altData.surfaceNormals, width, height, THREE.RGBAFormat, THREE.FloatType,
+		undefined,
+		undefined,
+		undefined,
+		THREE.LinearFilter,
+		THREE.LinearMipmapLinearFilter
+	);
 	originalPositionDataTextureAlt.needsUpdate = true;
+	originalNormalsDataTextureAlt.needsUpdate = true;
 
 	// NOTE! type can be both THREE.FloatType and THREE.HalfFloatType for compute render targets.
 	// HalfFloat uses 16-bit floating point textures which in some cases allows to achieve faster performance.
@@ -286,7 +258,9 @@ function setupTextureResources(params)
 
 	return {
 		originalPositionDataTexture,
+		originalNormalsDataTexture,
 		originalPositionDataTextureAlt,
+		originalNormalsDataTextureAlt,
 		computeRenderTargets: [computeRenderTarget0, computeRenderTarget1]
 	};
 }
@@ -320,9 +294,19 @@ function setupShaderMaterials(shaders, textures)
 				value: textures.originalPositionDataTexture
 			},
 
+			uParticlesOriginNormal: {
+				type: "t",
+				value: textures.originalNormalsDataTexture
+			},
+
 			uParticlesOriginPositionAlt: {
 				type: "t",
 				value: textures.originalPositionDataTextureAlt
+			},
+
+			uParticlesOriginNormalAlt: {
+				value: "t",
+				value: textures.originalNormalsDataTextureAlt
 			},
 
 			uParticlesPositions: {
@@ -462,8 +446,7 @@ function init(shaders)
 
 	// const data = resampleToTorusKnot(width, height);
 	// const data = resampleToCone(width, height);
-	const data = resampleToBox(width, height);
-	textures = setupTextureResources({ width, height, data });
+	textures = setupTextureResources({ width, height });
 	materials = setupShaderMaterials(shaders, textures);
 	particlesComputeProgram = setupParticlesComputePorgram({ width, height, materials });
 	pointsRenderProgram = setupPointsRenderProgram({ width, height, materials });
