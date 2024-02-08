@@ -134,9 +134,11 @@ void main()
 	float rndVal = n1rand(pos.xy);
 
 	float tf = uTime * 0.5f;
-	float n0 = cnoise3(originPos * uNoiseScale + tf) * uNoiseMagnitude;
+	vec3 p = pos * uNoiseScale;
+	p = vec3(p.x + cos(tf), p.y + sin(tf), p.z + tf);
+	float n0 = cnoise3(p) * uNoiseMagnitude;
 	// float n1 = cnoise3(pos * 5.0 + n0 + tf) * .0025;
-	pos += normal * n0;
+	pos += normalize(normal) * n0;
 
 	if (particleLifeTime > uParticlesLifetime)
 	{

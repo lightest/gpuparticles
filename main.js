@@ -41,7 +41,7 @@ gui.add(debugObject, "noiseScale", 0, 10, .1).onChange((v) => {
 	materials.simShaderMaterial.uniforms.uNoiseScale.value = v;
 });
 
-gui.add(debugObject, "noiseMagnitude", 0, .05, .001).onChange((v) => {
+gui.add(debugObject, "noiseMagnitude", 0, .5, .001).onChange((v) => {
 	materials.simShaderMaterial.uniforms.uNoiseMagnitude.value = v;
 });
 
