@@ -23,7 +23,9 @@ const debugObject = {
 	particleStartColor: 0x8c2eff,
 	particleEndColor: 0x6bdef5,
 	particleLifetime: 1.5,
-	spawnPointMix: 0
+	spawnPointMix: 0,
+	noiseScale: 3.0,
+	noiseMagnitude: .005
 };
 
 gui.add(debugObject, "particleLifetime", .01, 7).onChange((v) => {
@@ -33,6 +35,14 @@ gui.add(debugObject, "particleLifetime", .01, 7).onChange((v) => {
 
 gui.add(debugObject, "spawnPointMix", 0, 1, .001).onChange((v) => {
 	materials.simShaderMaterial.uniforms.uOriginPointMix.value = v;
+});
+
+gui.add(debugObject, "noiseScale", 0, 10, .1).onChange((v) => {
+	materials.simShaderMaterial.uniforms.uNoiseScale.value = v;
+});
+
+gui.add(debugObject, "noiseMagnitude", 0, .05, .001).onChange((v) => {
+	materials.simShaderMaterial.uniforms.uNoiseMagnitude.value = v;
 });
 
 gui.addColor(debugObject, "particleStartColor").onChange(() =>
@@ -105,7 +115,7 @@ function sampleMeshSurface(width, height, mesh)
 	// TODO: ensure this works for .glbs
 	if (!(mesh.material instanceof THREE.MeshBasicMaterial))
 	{
-		const material = new THREE.MeshBasicMaterial( {color: 0xffffff} );
+		const material = new THREE.MeshBasicMaterial( {color: 0xff0000} );
 		mesh.material = material;
 	}
 
@@ -184,6 +194,7 @@ function glbToMeshSurfacePoints(glbModel)
 	const width = 512;
 	const height = 512;
 	const mesh = glbModel.scene.children.find(child => child instanceof THREE.Mesh);
+	mesh.scale.set(.1, .1, .1);
 	const data = sampleMeshSurface(width, height, mesh);
 
 	const originalPositionsDataTexture = new THREE.DataTexture(data.surfacePoints, width, height, THREE.RGBAFormat, THREE.FloatType);
@@ -213,6 +224,7 @@ function setupTextureResources(params)
 	if (!data)
 	{
 		data = resampleToBox(width, height);
+		// data = resampleToCone(width, height);
 	}
 
 	if (!altData)
@@ -283,6 +295,14 @@ function setupShaderMaterials(shaders, textures)
 
 			uParticlesLifetime: {
 				value: debugObject.particleLifetime
+			},
+
+			uNoiseScale: {
+				value: debugObject.noiseScale
+			},
+
+			uNoiseMagnitude: {
+				value: debugObject.noiseMagnitude
 			},
 
 			uOriginPointMix: {
@@ -430,15 +450,15 @@ function init(shaders)
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	scene = new THREE.Scene();
 
-	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
+	camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
 	// camera.position.x = 1
 	// camera.position.y = 1
 	camera.position.z = 1
 	scene.add(camera)
 
 	controls = new OrbitControls( camera, canvas );
-	controls.radius = 400;
-	controls.speed = 3;
+	// controls.radius = 400;
+	// controls.speed = 3;
 
 	var width = 512, height = 512;
 	// var width = 64, height = 64;

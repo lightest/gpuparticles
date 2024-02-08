@@ -13,6 +13,8 @@ uniform float uTime;
 // Delta time.
 uniform float uDt;
 uniform float uParticlesLifetime;
+uniform float uNoiseScale;
+uniform float uNoiseMagnitude;
 uniform float uOriginPointMix;
 
 varying vec2 vUv;
@@ -132,7 +134,7 @@ void main()
 	float rndVal = n1rand(pos.xy);
 
 	float tf = uTime * 0.5f;
-	float n0 = cnoise3(pos * 3.0 - tf) * .005;
+	float n0 = cnoise3(originPos * uNoiseScale + tf) * uNoiseMagnitude;
 	// float n1 = cnoise3(pos * 5.0 + n0 + tf) * .0025;
 	pos += normal * n0;
 
@@ -141,6 +143,7 @@ void main()
 		pos = mix(originPos, originPosAlt, uOriginPointMix);
 		// pos = originPosAlt;
 		particleLifeTime = rndVal * uParticlesLifetime;
+		// particleLifeTime = 0.0;
 	}
 
 	// Write new position out
