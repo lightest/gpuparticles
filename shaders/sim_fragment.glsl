@@ -1,3 +1,5 @@
+precision mediump float;
+
 // Particles original position, which we need if we want to reset them.
 // For instance to respawn the particle at the model surface.
 uniform sampler2D uParticlesOriginPosition;
@@ -16,6 +18,8 @@ uniform float uParticlesLifetime;
 uniform float uNoiseScale;
 uniform float uNoiseMagnitude;
 uniform float uOriginPointMix;
+uniform vec3 uPointerPos;
+uniform float uPointerDisplacementMagnitude;
 
 varying vec2 vUv;
 
@@ -27,12 +31,12 @@ float rand(vec2 co)
 //note: uniformly distributed, normalized rand, [0;1[
 float nrand(vec2 n)
 {
-  return fract(sin(dot(n.xy, vec2(12.9898, 78.233)))* 43758.5453);
+	return fract(sin(dot(n.xy, vec2(12.9898, 78.233)))* 43758.5453);
 }
 
 float n1rand(vec2 n)
 {
-  return nrand(0.07 * fract(uTime * .001) + n);
+	return nrand(0.07 * fract(uTime * .001) + n);
 }
 
 //	Classic Perlin 3D Noise
@@ -133,12 +137,26 @@ void main()
 
 	float rndVal = n1rand(pos.xy);
 
+
 	float tf = uTime * 0.5f;
 	vec3 p = pos * uNoiseScale;
 	p = vec3(p.x + cos(tf), p.y + sin(tf), p.z + tf);
-	float n0 = cnoise3(p) * uNoiseMagnitude;
+	float n0 = cnoise3(p);
+	float n0Scaled = n0 * uNoiseMagnitude;
 	// float n1 = cnoise3(pos * 5.0 + n0 + tf) * .0025;
-	pos += normalize(normal) * n0;
+	pos += normal * n0Scaled;
+
+	// Raycaster driven position offset offset.
+	// Deviating direction of the normal using noise, to displace particles in an interestingly looking direction.
+	vec3 deviatedNormal = normal + vec3(n0);
+
+	// Sphere shape.
+	// float l = 1.0f - clamp(length(uPointerPos - pos), 0.0f, 1.0f);
+
+	// Gaussian shape.
+	float l = exp(-pow(length(uPointerPos - pos), 2.0));
+	pos += deviatedNormal * l * uPointerDisplacementMagnitude;
+
 
 	if (particleLifeTime > uParticlesLifetime)
 	{

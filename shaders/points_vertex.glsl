@@ -1,12 +1,15 @@
+precision mediump float;
+
 uniform sampler2D uParticlesOutput;
-uniform vec3 uPartcileStartColor;
-uniform vec3 uPartcileEndColor;
+uniform vec3 uParticleStartColor;
+uniform vec3 uParticleEndColor;
+uniform vec3 uParticleTouchColor;
 
 uniform float uSize;
 uniform float uTime;
 uniform float uParticlesLifetime;
+uniform vec3 uPointerPos;
 
-varying vec2 vUv;
 varying vec4 vPosition;
 varying vec3 vParticleColor;
 
@@ -17,45 +20,35 @@ bool isPerspectiveMatrix( mat4 m )
 
 void main()
 {
-	// vec3 color = texture2D( map, vUv ).rgb * 200.0 - 100.0;
 	vec4 data = texture2D(uParticlesOutput, position.xy);
 	vec3 pos = data.xyz;
 
-	// pos += (sin(uTime * 2.) + 1.0) * normalize(pos);
-
-	// float x = pos.x + uTime;
-	// float y = pos.y;
-	// float z = pos.z;
-
-	// float A = .075;
-
-	// pos.x += sin( y * 7.0 ) * cos( z * 12.0 ) * A;
-	// pos.y += sin( x * 8.0 ) * cos( z * 13.0 ) * A;
-	// pos.z += sin( x * 9.0 ) * cos( y * 14.0 ) * A;
-
 	vec4 modelPosition = modelMatrix * vec4(pos, 1.);
 
-	// float angle = atan(modelPosition.x, modelPosition.z);
-	// float distanceToCenter = length(modelPosition.xyz);
-	// float angleOffset = (1. / distanceToCenter) * uTime * .2;
-	// angle += angleOffset;
-	// modelPosition.x = cos(angle) * distanceToCenter;
-	// modelPosition.z = sin(angle) * distanceToCenter;
-
-	// modelPosition.xyz += aRand;
+	vec3 displacementDir = normalize(modelPosition.xyz - uPointerPos);
 
 	vec4 viewPosition = viewMatrix * modelPosition;
 	vec4 projectedPosition = projectionMatrix * viewPosition;
 
-	// gl_Position = projectionMatrix * modelViewMatrix * vec4( color, 1.0 );
-	// gl_Position = projectionMatrix * modelViewMatrix * vec4( position * 200.0, 1.0 );
-
 	float lifeTime = data.w;
-	vParticleColor = mix(uPartcileStartColor, uPartcileEndColor, lifeTime / uParticlesLifetime);
+	vParticleColor = mix(uParticleStartColor, uParticleEndColor, lifeTime / uParticlesLifetime);
 
-	gl_PointSize = 1.0f;
+	// Raycaster driven color offset.
+	// Sphere shape.
+	// float l = 1.0f - clamp(length(uPointerPos - modelPosition.xyz), 0.0f, 1.0f);
+
+	// Gaussian shape.
+	float l = exp(-pow(length(uPointerPos - modelPosition.xyz), 2.0));
+	vParticleColor = mix(vParticleColor, uParticleTouchColor, l);
+
+	// TODO: experiment with depth.
+	// float depth = (0.5f * projectedPosition.z / projectedPosition.w + 0.5f);
+	// vParticleColor *= depth;
+
+	// Raycaster driven size change.
+	gl_PointSize = 20.0f;
+
 	gl_Position = projectedPosition;
-	// gl_PointSize = uSize * aScale;
 	if ( isPerspectiveMatrix( projectionMatrix ) ) gl_PointSize *= ( 1. / - viewPosition.z );
 
 }
