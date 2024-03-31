@@ -6,7 +6,6 @@ uniform vec3 uParticleEndColor;
 uniform vec3 uParticleTouchColor;
 
 uniform float uSize;
-uniform float uTime;
 uniform float uParticlesLifetime;
 uniform vec3 uPointerPos;
 
