@@ -24,7 +24,6 @@ void main()
 	vec3 pos = data.xyz;
 
 	vec4 modelPosition = modelMatrix * vec4(pos, 1.);
-
 	vec3 displacementDir = normalize(modelPosition.xyz - uPointerPos);
 
 	vec4 viewPosition = viewMatrix * modelPosition;
@@ -45,7 +44,6 @@ void main()
 	// float depth = (0.5f * projectedPosition.z / projectedPosition.w + 0.5f);
 	// vParticleColor *= depth;
 
-	// Raycaster driven size change.
 	gl_PointSize = 20.0f;
 
 	gl_Position = projectedPosition;

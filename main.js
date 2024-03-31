@@ -644,6 +644,7 @@ function updateRaycaster()
 
         materials.pointsRenderShaderMaterial.uniforms.uPointerPos.value = cursor3D;
 
+        // Convert cursor corrdinates to the particle's local space.
         cursor3DVec4.set(cursor3D.x, cursor3D.y, cursor3D.z, 1.0);
         inverseMeshWorldMatrix.copy(currentMesh.matrixWorld);
         inverseMeshWorldMatrix.invert();

@@ -23,11 +23,6 @@ uniform float uPointerDisplacementMagnitude;
 
 varying vec2 vUv;
 
-float rand(vec2 co)
-{
-	return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-}
-
 //note: uniformly distributed, normalized rand, [0;1[
 float nrand(vec2 n)
 {
@@ -132,22 +127,18 @@ void main()
 	vec3 originNormalAlt = originParticleNormalsAlt.xyz;
 
 	vec3 normal = mix(originNormal, originNormalAlt, uOriginPointMix);
-
 	float particleLifeTime = particleData.w + uDt;
-
 	float rndVal = n1rand(pos.xy);
-
 
 	float tf = uTime * 0.5f;
 	vec3 p = pos * uNoiseScale;
 	p = vec3(p.x + cos(tf), p.y + sin(tf), p.z + tf);
 	float n0 = cnoise3(p);
 	float n0Scaled = n0 * uNoiseMagnitude;
-	// float n1 = cnoise3(pos * 5.0 + n0 + tf) * .0025;
 	pos += normal * n0Scaled;
 
-	// Raycaster driven position offset offset.
-	// Deviating direction of the normal using noise, to displace particles in an interestingly looking direction.
+	// Raycaster driven position offset.
+	// Deviating direction of the normal using noise, to displace particles in an interestingly looking way.
 	vec3 deviatedNormal = normal + vec3(n0);
 
 	// Sphere shape.
@@ -161,13 +152,9 @@ void main()
 	if (particleLifeTime > uParticlesLifetime)
 	{
 		pos = mix(originPos, originPosAlt, uOriginPointMix);
-		// pos = originPosAlt;
 		particleLifeTime = rndVal * uParticlesLifetime;
-		// particleLifeTime = 0.0;
 	}
 
-	// Write new position out
+	// Write new position out.
 	gl_FragColor = vec4(pos, particleLifeTime);
-	// gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-	// gl_FragColor = vec4(vUv, 0.0, 1.0);
 }
