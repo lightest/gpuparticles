@@ -182,15 +182,16 @@ async function loadShaders()
 }
 
 function sampleMeshSurface(width, height, mesh) {
-	if (!mesh) {
+	if (!mesh)
+	{
 		console.error("Mesh is undefined!");
 		return;
 	}
 
 	let i, l;
 
-	// TODO: ensure this works for .glbs
-	if (!(mesh.material instanceof THREE.MeshBasicMaterial)) {
+	if (!(mesh.material instanceof THREE.MeshBasicMaterial))
+	{
 		const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 		mesh.material = material;
 	}
@@ -245,7 +246,6 @@ function resampleToTorusKnot(width, height)
 
 	return sampleMeshSurface(width, height, mesh);
 }
-window.resampleToTorusKnot = resampleToTorusKnot;
 
 function resampleToCone(width, height)
 {
@@ -256,7 +256,6 @@ function resampleToCone(width, height)
 
 	return sampleMeshSurface(width, height, mesh);
 }
-window.resampleToCone = resampleToCone;
 
 function resampleToBox(width, height)
 {
@@ -267,7 +266,6 @@ function resampleToBox(width, height)
 
 	return sampleMeshSurface(width, height, mesh);
 }
-window.resampleToBox = resampleToBox;
 
 function glbToMeshSurfacePoints(glbModel) {
 	const width = SIM_WIDTH;
@@ -294,7 +292,8 @@ function glbToMeshSurfacePoints(glbModel) {
 	};
 }
 
-function setupTextureResources(params) {
+function setupTextureResources(params)
+{
 	const { width, height } = params;
 
 	// NOTE! type can be both THREE.FloatType and THREE.HalfFloatType for compute render targets.
@@ -314,7 +313,8 @@ function setupTextureResources(params) {
 	};
 }
 
-function setupShaderMaterials(shaders, textures) {
+function setupShaderMaterials(shaders, textures)
+{
 	// This is analogy of compute shader which calculates positions of the particles
 	// for the next simulation step, hence the name.
 	const simShaderMaterial = new THREE.ShaderMaterial({
@@ -424,7 +424,8 @@ function setupShaderMaterials(shaders, textures) {
 	};
 }
 
-function setupParticlesComputePorgram(pipelineParams = {}) {
+function setupParticlesComputePorgram(pipelineParams = {})
+{
 	const { materials } = pipelineParams;
 	const scene = new THREE.Scene();
 
