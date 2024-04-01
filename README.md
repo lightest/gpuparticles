@@ -14,3 +14,7 @@ npm run dev
 ```
 
 Open [http://localhost:5173/](http://localhost:5173/) in the browser.
+
+## Model Loading drag n drop.
+There's a drag and drop handling active on the page. If you like to experiment with your own models, export them to one mesh `.glb` file and just toss them on the page.
+Few additional examples provided in `static/models` directory.
