@@ -43,5 +43,4 @@ void main()
 
 	gl_Position = projectedPosition;
 	if ( isPerspectiveMatrix( projectionMatrix ) ) gl_PointSize *= ( 1. / - viewPosition.z );
-
 }
