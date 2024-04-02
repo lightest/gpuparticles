@@ -148,17 +148,6 @@ dracoLoader.setDecoderPath("draco/");
 const gltfLoader = new GLTFLoader()
 gltfLoader.setDRACOLoader(dracoLoader);
 
-// gltfLoader.load("models/monkey.glb", (glbModel) =>
-// {
-// 	const mesh = glbModel.scene.children.find(child => child instanceof THREE.Mesh);
-// 	console.log(mesh);
-// 	const data = sampleMeshSurface(512, 512, mesh);
-// 	console.log(data);
-// 	const originalPositionDataTexture = new THREE.DataTexture(data, 512, 512, THREE.RGBAFormat, THREE.FloatType);
-// 	originalPositionDataTexture.needsUpdate = true;
-// 	materials.simShaderMaterial.uniforms.uParticlesOriginPosition.value = originalPositionDataTexture;
-// });
-
 async function loadShaders()
 {
 	let result = await fetch("./shaders/sim_vertex.glsl");
@@ -429,7 +418,8 @@ function setupParticlesComputePorgram(pipelineParams = {})
 	const { materials } = pipelineParams;
 	const scene = new THREE.Scene();
 
-	// TODO: why 2^53??
+	// 1 / 2^53 is just to get a super small number.
+    // This is from an old mr.doob's sample on gpu particles.
 	const camera = new THREE.OrthographicCamera(
 		-1,
 		1,
@@ -438,7 +428,6 @@ function setupParticlesComputePorgram(pipelineParams = {})
 		1 / Math.pow(2, 53),
 		1
 	);
-	// const camera = new THREE.OrthographicCamera( width / - 2, width / 2, height / 2, height / - 2, 1, 1000 );
 
 	const quadVertices = new Float32Array([
 		-1, -1, 0, 1, -1, 0, 1, 1, 0,

@@ -39,10 +39,6 @@ void main()
 	float l = exp(-pow(length(uPointerPos - modelPosition.xyz), 2.0));
 	vParticleColor = mix(vParticleColor, uParticleTouchColor, l);
 
-	// TODO: experiment with depth.
-	// float depth = (0.5f * projectedPosition.z / projectedPosition.w + 0.5f);
-	// vParticleColor *= depth;
-
 	gl_PointSize = 20.0f;
 
 	gl_Position = projectedPosition;
