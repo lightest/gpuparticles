@@ -6,7 +6,7 @@ Particle system and SFX developed for [Immersive Studios](https://twitter.com/Im
 
 
 ## Run instructions:
-Dev environment using `vite`. Clone the repo, `cd` to filder and run:
+Dev environment using `vite`. Clone the repo, `cd` to the directory and run:
 
 ```
 npm instal
