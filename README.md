@@ -4,6 +4,8 @@ Particle system and SFX developed for [Immersive Studios](https://twitter.com/Im
 
 ![image](https://github.com/lightest/gpuparticles/assets/2725889/64da37ef-e051-4496-8aaa-cf252c1d1783)
 
+## Medium article:
+https://medium.com/@lightest/space-rockets-and-gpu-particles-c8b93f26c9d1
 
 ## Run instructions:
 Dev environment using `vite`. Clone the repo, `cd` to the directory and run:
