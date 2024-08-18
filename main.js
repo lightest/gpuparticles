@@ -53,9 +53,9 @@ const particlesDebugObject = {
 	particleTouchColor: 0xa46652,
 	particleLifetime: 0.95064,
 	spawnPointMix: 0,
-	pointerDisplacementMag: 0.065,
+	pointerDisplacementMag: Math.PI * 1.15, // PI is arbitrary
 	noiseScale: 1.3,
-	noiseMagnitude: .005,
+	noiseMagnitude: Math.PI * 0.075, // also arbitrary
 	modelPositionX: 0,
 	modelPositionY: 0,
 	modelPositionZ: 0,
@@ -76,7 +76,7 @@ particlesgui.add(particlesDebugObject, "spawnPointMix", 0, 1, .001).onChange((v)
 	gParticlesMaterial.simShaderMaterial.uniforms.uOriginPointMix.value = v;
 });
 
-particlesgui.add(particlesDebugObject, "pointerDisplacementMag", 0, 1, .001).onChange((v) => {
+particlesgui.add(particlesDebugObject, "pointerDisplacementMag", 0, 10, .001).onChange((v) => {
 	gParticlesMaterial.simShaderMaterial.uniforms.uPointerDisplacementMagnitude.value = v;
 });
 
@@ -84,7 +84,7 @@ particlesgui.add(particlesDebugObject, "noiseScale", 0, 10, .1).onChange((v) => 
 	gParticlesMaterial.simShaderMaterial.uniforms.uNoiseScale.value = v;
 });
 
-particlesgui.add(particlesDebugObject, "noiseMagnitude", 0, .5, .001).onChange((v) => {
+particlesgui.add(particlesDebugObject, "noiseMagnitude", 0, 10, .001).onChange((v) => {
 	gParticlesMaterial.simShaderMaterial.uniforms.uNoiseMagnitude.value = v;
 });
 
@@ -644,6 +644,7 @@ function updateRaycaster()
 	}
 }
 
+window.globalDT = 0;
 function update()
 {
 	const elapsedTime = clock.getElapsedTime();
@@ -676,16 +677,16 @@ function update()
 	simStep = (simStep + 1) % 2;
 	prevFrameTime = elapsedTime;
 
-	animate3DCursor();
+	animate3DCursor(dt);
 
 	// Constantly rotate the model, just for demo sake.
-	pointsRenderProgram.pointsMesh.rotation.y += 0.003;
+	pointsRenderProgram.pointsMesh.rotation.y += 0.15 * dt;
 }
 
-function animate3DCursor()
+function animate3DCursor(dt)
 {
 	const lerp = THREE.MathUtils.lerp;
-	const lerp_speed = 0.1;
+	const lerp_speed = 7 * dt;
 
 	const nX = lerp(cursor3D.x, targetCursor3D.x, lerp_speed);
 	const nY = lerp(cursor3D.y, targetCursor3D.y, lerp_speed);
@@ -745,8 +746,9 @@ function handleWindowResize(e)
 	camera.updateProjectionMatrix();
 
 	// Update renderer
-	renderer.setSize(window.innerWidth, window.innerHeight);
-	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+	const pr = Math.min(window.devicePixelRatio, 2);
+	renderer.setPixelRatio(pr);
+	renderer.setSize(window.innerWidth, window.innerHeight, false);
 }
 
 function addEventListeners()
@@ -820,7 +822,9 @@ async function onLoad()
 	const renderer = new THREE.WebGLRenderer({
 		canvas: document.querySelector("canvas")
 	});
-	renderer.setSize( window.innerWidth, window.innerHeight );
+	const pr = Math.min(window.devicePixelRatio, 2);
+	renderer.setPixelRatio(pr);
+	renderer.setSize(window.innerWidth, window.innerHeight, false);
 	camera.position.setZ(5);
 
 	const { pointsMesh, materials } = await init(
@@ -839,7 +843,7 @@ async function onLoad()
 	materials.simShaderMaterial.uniforms.uParticlesLifetime.value = particlesDebugObject.particleLifetime;
 	materials.pointsRenderShaderMaterial.uniforms.uParticlesLifetime.value = particlesDebugObject.particleLifetime;
 	materials.simShaderMaterial.uniforms.uNoiseScale.value = particlesDebugObject.noiseScale;
-	materials.simShaderMaterial.uniforms.uNoiseMagnitude.value = .005;
+	materials.simShaderMaterial.uniforms.uNoiseMagnitude.value = particlesDebugObject.noiseMagnitude;
 	materials.simShaderMaterial.uniforms.uPointerDisplacementMagnitude.value = particlesDebugObject.pointerDisplacementMag;
 	materials.pointsRenderShaderMaterial.uniforms.uParticleStartColor.value.set(0x3c355f);
 	materials.pointsRenderShaderMaterial.uniforms.uParticleEndColor.value.set(0x343555);

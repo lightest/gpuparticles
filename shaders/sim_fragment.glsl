@@ -135,7 +135,7 @@ void main()
 	p = vec3(p.x + cos(tf), p.y + sin(tf), p.z + tf);
 	float n0 = cnoise3(p);
 	float n0Scaled = n0 * uNoiseMagnitude;
-	pos += normal * n0Scaled;
+	pos += normal * n0Scaled * uDt;
 
 	// Raycaster driven position offset.
 	// Deviating direction of the normal using noise, to displace particles in an interestingly looking way.
@@ -146,7 +146,7 @@ void main()
 
 	// Gaussian shape.
 	float l = exp(-pow(length(uPointerPos - pos), 2.0));
-	pos += deviatedNormal * l * uPointerDisplacementMagnitude;
+	pos += deviatedNormal * l * uPointerDisplacementMagnitude * uDt;
 
 
 	if (particleLifeTime > uParticlesLifetime)
